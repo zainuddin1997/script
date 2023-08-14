@@ -1,0 +1,70 @@
+#!/bin/bash
+
+lsblk
+# Define the block device for whcih you need to make parition e.g, sda,sdb,vda,vdb
+
+read -p "Enter block device for parition: " BLOCK_DEVICE
+# Define the parition size ( defult size is in GB)
+
+read -p "Enter size of parition: " PARTITION_SIZE
+
+# creating partition using the above inputs
+
+echo -e "n\np\n\n\n+${PARTITION_SIZE}G\nw" | fdisk /dev/${BLOCK_DEVICE}
+
+# kernel will read the disk changes made
+partprobe
+
+# list block devices
+
+lsblk
+
+# enter the new parition that is created according to the block device selected ealier.
+
+read -p "Enter the new created partition device for PVcreation: " PHYSICAL_DEVICE
+
+# PV creation of the parition of the block device
+
+pvcreate ${PHYSICAL_DEVICE}
+
+echo "Physical Volume ${PHYSICAL_DEVICE} has been created."
+
+# display volume group
+vgs
+
+#Enter the volume group to be extended
+
+read -p "Enter Volume group to extend: " VG_NAME
+
+#Display LVM group
+
+lvs
+
+# Enter the LVM to be entended
+
+read -p "Enter LVM name to extend: " LV_NAME
+
+# volume group extend with the above inputs
+
+vgextend $VG_NAME /dev/${PHYSICAL_DEVICE}
+
+# LVM extend with the above inputs
+
+lvextend -l +100%FREE /dev/$VG_NAME/$LV_NAME
+
+#Display disk free with file system type.
+
+df -Th
+
+# choose the file system type, as widely XFS and ext4 is used,so only made for ext4 and xfs
+
+read -p "Enter the file system type: " File_system
+if [[ $File_system == "ext4" ]]
+then
+resize2fs /dev/$VG_NAME/$LV_NAME
+lsblk
+   exit 1
+else
+growxfs /dev/$VG_NAME/$LV_NAME
+lsblk
+fi
